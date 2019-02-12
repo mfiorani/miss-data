@@ -2,8 +2,9 @@
 library("dplyr")
 library("mice")
 library("mi")
+library("missForest")
 library("ggplot2")
-# library("ggthemes")
+library("gridExtra")
 library("caret")
 
 
@@ -55,14 +56,14 @@ generate_data <- function(model_name, df, perc, rr, target_var, positive){
     mi <- imputations[miss == 1, index]
   }
 
-  # MULTIPLE IMPUTATIONS WITH MICE PACKAGE USING RANDOMFOREST
+  # MULTIPLE IMPUTATIONS WITH MISS-FOREST PACKAGE
   if(model_name == "missForest"){
     df_covariates_mi <- df
     df_covariates_mi[, eval(target_var)][miss == 1] <- NA
     
     cat(model_name, " imputations", fill = T)
     
-    imp <- missForest::missForest(df_covariates_mi, verbose = FALSE)
+    imp <- missForest(df_covariates_mi, verbose = FALSE)
     imputations <- imp$ximp
     cat(model_name, " imputations completed", fill = T)
     
@@ -231,8 +232,5 @@ p_F1 <- ggplot(F1, aes(x=missing, y=mean, color=package)) +
   theme(legend.position="bottom") +
   facet_wrap( ~ package, ncol=4)
 
-library("gridExtra")
 plots <- list(p_acc, p_spec, p_sens, p_F1)
-# do.call(grid.arrange, plots)
-
 grid.arrange(arrangeGrob(grobs = plots, top = "Statistics for cross-validated imputation techniques at increasing amounts of missing values"))
