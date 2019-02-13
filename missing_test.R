@@ -2,18 +2,14 @@
 library("dplyr")
 library("mice")
 library("mi")
-library("missForest")
 library("ggplot2")
-library("gridExtra")
 library("caret")
 
 
 ###### GETTING THE DATASET
-setwd("C://Users//matteo.fiorani//Desktop//pjs//heart-disease")
 df <- read.csv("data//heart.csv")
 
 
-###### FUNCTIONS
 # ----------------------------------------------------------------
 # -------------------- F U N C T I O N S -------------------------
 # ----------------------------------------------------------------
@@ -56,14 +52,14 @@ generate_data <- function(model_name, df, perc, rr, target_var, positive){
     mi <- imputations[miss == 1, index]
   }
 
-  # MULTIPLE IMPUTATIONS WITH MISS-FOREST PACKAGE
+  # MULTIPLE IMPUTATIONS WITH MICE PACKAGE USING RANDOMFOREST
   if(model_name == "missForest"){
     df_covariates_mi <- df
     df_covariates_mi[, eval(target_var)][miss == 1] <- NA
     
     cat(model_name, " imputations", fill = T)
     
-    imp <- missForest(df_covariates_mi, verbose = FALSE)
+    imp <- missForest::missForest(df_covariates_mi, verbose = FALSE)
     imputations <- imp$ximp
     cat(model_name, " imputations completed", fill = T)
     
@@ -74,7 +70,8 @@ generate_data <- function(model_name, df, perc, rr, target_var, positive){
   try(cm_mi <- confusionMatrix(as.factor(mi), as.factor(label), positive = positive))
   
   cat(model_name, "saving data", fill = T)
-  try(saveRDS(cm_mi, file = paste0("test/CM_r_", rr, "_", model_name, "_", perc, ".rds")))
+  name <- paste0("CM_r_", rr, "_", model_name, "_", perc)
+  assign(name, cm_mi, envir = .GlobalEnv)
   cat(model_name, "ALL DONE", fill = T)
 }
 
@@ -91,7 +88,7 @@ test_increasing <- function(perc, rr, models, df, target_var, positive){
 summarise_SE <- function(df, conf_interval, groupings, statistic){
   qstatistic <- enquo(statistic)
   tmp <- df %>% group_by(!!!groupings) %>% 
-    summarise(N = n(), mean = mean(!!qstatistic), sd = sd(!!qstatistic))
+    summarise(N = n(), mean = mean(!!qstatistic, na.rm = T), sd = sd(!!qstatistic, na.rm = T))
   tmp$se <- tmp$sd / sqrt(tmp$N)
   tmp$ci <- tmp$se * qt(conf_interval / 2 + .5, tmp$N - 1)
   names(tmp)
@@ -102,8 +99,8 @@ summarise_SE <- function(df, conf_interval, groupings, statistic){
 # ----------------------------------------------------------------
 # ----------------------------------------------------------------
 
-###### DATA PREPROCESSING
 
+###### DATA PREPROCESSING
 df <- data.frame(df)
 names(df)[1] <- "age"
 
@@ -115,13 +112,13 @@ for(col in names(df)){
   }
 }
 
-# LEVELS FOR FACTOR VARIABLE
+# LEVELS FOR FACTORS
 levels(df$target) <- c("No", "Yes")
 levels(df$sex) <- c("Female", "Male")
 levels(df$fbs) <- c("False", "True")
 levels(df$exang) <- c("No", "Yes")
 
-###### IMPUTATIG MISSING DATA
+###### IMPUTATING MISSING DATA
 models <- c("mi", "mice", "missForest")
 repeats <- 5
 probs <- c(1:5)/10
@@ -138,9 +135,7 @@ res <- data.frame()
 for(i in 1:repeats){
   for(p in probs){
     for(model_name in models){
-      file <- paste0("test/CM_r_", i, "_", model_name, "_", p, ".rds")
-      name <- paste0(model_name, "_CM")
-      try(assign(name, readRDS(file)))
+      name <- paste0("CM_r_", i, "_", model_name, "_", p)
       tmp <- data.frame(t(get(name)$overall))
       tmp <- cbind(package = model_name, missing = p, rep = i, tmp)
       tmp <- cbind(tmp, data.frame(t(get(name)$byClass)) )
@@ -148,6 +143,8 @@ for(i in 1:repeats){
     }
   }
 }
+
+write.csv(res, "results.csv")
 
 grouping <- quos(package, missing)
 acc <- summarise_SE(df = res, .95, statistic = Accuracy, grouping = grouping)
@@ -157,8 +154,7 @@ F1 <- summarise_SE(df = res, .95, statistic = F1, grouping = grouping)
 
 
 ######  GENERATING PLOTS
-theme_set(theme_fivethirtyeight())
-pd <- 0.04
+pd <- 0.01
 
 p_acc <- ggplot(acc, aes(x=missing, y=mean, color=package)) + 
   geom_line(size = 1, position = position_dodge(pd)) + 
