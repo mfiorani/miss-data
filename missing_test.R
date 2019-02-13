@@ -144,7 +144,7 @@ for(i in 1:repeats){
   }
 }
 
-write.csv(res, "results.csv")
+write.csv(res, "data/results.csv")
 
 grouping <- quos(package, missing)
 acc <- summarise_SE(df = res, .95, statistic = Accuracy, grouping = grouping)
