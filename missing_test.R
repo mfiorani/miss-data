@@ -164,6 +164,6 @@ p_oob <- ggplot(oob, aes(x=missing, y=mean, fill=package)) +
   labs(title="OOB misclassification error (%)") +
   scale_y_continuous(breaks=0:10*0.1) +
   scale_x_continuous(breaks=0:10*0.1) +
-  theme(legend.position="bottom") # +
+  theme(legend.position="bottom")
 
 p_oob
