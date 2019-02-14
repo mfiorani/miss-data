@@ -7,7 +7,6 @@ library("caret")
 
 
 ###### GETTING THE DATASET
-setwd("C://Users//matteo.fiorani//Desktop//pjs//heart-disease")
 df <- read.csv("data//heart.csv")
 
 
@@ -121,7 +120,7 @@ levels(df$exang) <- c("No", "Yes")
 
 ###### IMPUTATING MISSING DATA
 models <- c("mi", "mice", "missForest")
-repeats <- 5
+repeats <- 10
 probs <- c(1:5)/10
 target <- "exang"
 positive <- levels(df[, eval(target)])[2]
@@ -132,6 +131,7 @@ for(i in 1:repeats){
 }
 
 ###### OOB MISCLASSIFICATION ERROR %
+res <- data.frame()
 for(i in 1:repeats){
   for(p in probs){
     for(model_name in models){
@@ -153,7 +153,6 @@ oob <- summarise_SE(df = res, .95, statistic = oob_err, grouping = grouping)
 pd <- 0.09
 p_oob <- ggplot(oob, aes(x=missing, y=mean, fill=package)) + 
   geom_bar(position=position_dodge(pd), stat="identity", size=.1) + 
-  
   geom_errorbar(aes(ymin=mean-se, ymax=mean+se),
                 size=.75,
                 width=.02, position = position_dodge(pd)) +
