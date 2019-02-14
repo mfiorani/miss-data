@@ -5,4 +5,4 @@ A brief testing of various missing data imputation techniques with R using the U
 
 
 
-![CV error](https://github.com/mfiorani/miss-data/raw/master/img/plot.png "CV OOB error")
+![CV error](https://github.com/mfiorani/miss-data/raw/master/images/plot.png "CV OOB error")
