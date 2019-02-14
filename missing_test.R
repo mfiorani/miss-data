@@ -7,6 +7,7 @@ library("caret")
 
 
 ###### GETTING THE DATASET
+setwd("C://Users//matteo.fiorani//Desktop//pjs//heart-disease")
 df <- read.csv("data//heart.csv")
 
 
@@ -130,103 +131,39 @@ for(i in 1:repeats){
   }
 }
 
-###### COLLECTING RESULTS
-res <- data.frame()
+###### OOB MISCLASSIFICATION ERROR %
 for(i in 1:repeats){
   for(p in probs){
     for(model_name in models){
       name <- paste0("CM_r_", i, "_", model_name, "_", p)
-      tmp <- data.frame(t(get(name)$overall))
-      tmp <- cbind(package = model_name, missing = p, rep = i, tmp)
-      tmp <- cbind(tmp, data.frame(t(get(name)$byClass)) )
+      cm <- get(name)$table
+      oob_err <- (cm[1,2] + cm[2,1]) / sum(cm)
+      tmp <- data.frame(package = model_name, missing = p, rep = i, oob_err = oob_err)
       res <- rbind(res, tmp)
     }
   }
 }
 
-write.csv(res, "data/results.csv")
+write.csv(res, "results.csv")
 
 grouping <- quos(package, missing)
-acc <- summarise_SE(df = res, .95, statistic = Accuracy, grouping = grouping)
-spec <- summarise_SE(df = res, .95, statistic = Specificity, grouping = grouping)
-sens <- summarise_SE(df = res, .95, statistic = Sensitivity, grouping = grouping)
-F1 <- summarise_SE(df = res, .95, statistic = F1, grouping = grouping)
+oob <- summarise_SE(df = res, .95, statistic = oob_err, grouping = grouping)
 
-
-######  GENERATING PLOTS
-pd <- 0.01
-
-p_acc <- ggplot(acc, aes(x=missing, y=mean, color=package)) + 
-  geom_line(size = 1, position = position_dodge(pd)) + 
-  geom_point(position = position_dodge(pd)) + 
-  scale_fill_brewer(palette = "Spectral") +
+######  GENERATING PLOT
+pd <- 0.09
+p_oob <- ggplot(oob, aes(x=missing, y=mean, fill=package)) + 
+  geom_bar(position=position_dodge(pd), stat="identity", size=.1) + 
+  
   geom_errorbar(aes(ymin=mean-se, ymax=mean+se),
                 size=.75,
                 width=.02, position = position_dodge(pd)) +
   guides(fill = guide_legend(title =  element_blank(), ncol = 8)) +
   theme(legend.text = element_text(size = 10)) +
   xlab("Missing data (%)") +
-  ylab("Accuracy (avg + se)") +
-  labs(title="Accuracy") +
-  expand_limits(y=c(0.4, 0.7)) +
+  ylab("OOB error (avg + se)") +
+  labs(title="OOB misclassification error (%)") +
   scale_y_continuous(breaks=0:10*0.1) +
   scale_x_continuous(breaks=0:10*0.1) +
-  theme(legend.position="bottom") +
-  facet_wrap( ~ package, ncol=4)
+  theme(legend.position="bottom") # +
 
-p_spec <- ggplot(spec, aes(x=missing, y=mean, color=package)) + 
-  geom_line(size = 1, position = position_dodge(pd)) + 
-  geom_point(position = position_dodge(pd)) + 
-  scale_fill_brewer(palette = "Spectral") +
-  geom_errorbar(aes(ymin=mean-se, ymax=mean+se),
-                size=.75,
-                width=.02, position = position_dodge(pd)) +
-  guides(fill = guide_legend(title =  element_blank(), ncol = 8)) +
-  theme(legend.text = element_text(size = 10)) +
-  xlab("Missing data (%)") +
-  ylab("Specificity (avg + se)") +
-  labs(title="Specificity") +
-  expand_limits(y=c(0.1, 0.8)) +
-  scale_y_continuous(breaks=0:10*0.1) +
-  scale_x_continuous(breaks=0:10*0.1) +
-  theme(legend.position="bottom") +
-  facet_wrap( ~ package, ncol=4)
-
-p_sens <- ggplot(sens, aes(x=missing, y=mean, color=package)) + 
-  geom_line(size = 1, position = position_dodge(pd)) + 
-  geom_point(position = position_dodge(pd)) + 
-  scale_fill_brewer(palette = "Spectral") +
-  geom_errorbar(aes(ymin=mean-se, ymax=mean+se),
-                size=.75,
-                width=.02, position = position_dodge(pd)) +
-  guides(fill = guide_legend(title =  element_blank(), ncol = 8)) +
-  theme(legend.text = element_text(size = 10)) +
-  xlab("Missing data (%)") +
-  ylab("Sensitivity (avg + se)") +
-  labs(title="Sensitivity") +
-  expand_limits(y=c(0.2, 0.9)) +
-  scale_y_continuous(breaks=0:10*0.1) +
-  scale_x_continuous(breaks=0:10*0.1) + 
-  theme(legend.position="bottom") +
-  facet_wrap( ~ package, ncol=4)
-
-p_F1 <- ggplot(F1, aes(x=missing, y=mean, color=package)) + 
-  geom_line(size = 1, position = position_dodge(pd)) + 
-  geom_point(position = position_dodge(pd)) + 
-  scale_fill_brewer(palette = "Spectral") +
-  geom_errorbar(aes(ymin=mean-se, ymax=mean+se),
-                size=.75,
-                width=.02, position = position_dodge(pd)) +
-  guides(fill = guide_legend(title =  element_blank(), ncol = 8)) +
-  theme(legend.text = element_text(size = 10)) +
-  xlab("Missing data (%)") +
-  ylab("F1 (avg + se)") +
-  labs(title="F1") +
-  expand_limits(y=c(0.2, 0.9)) +
-  scale_y_continuous(breaks=0:10*0.1) +
-  scale_x_continuous(breaks=0:10*0.1) + 
-  theme(legend.position="bottom") +
-  facet_wrap( ~ package, ncol=4)
-
-plots <- list(p_acc, p_spec, p_sens, p_F1)
-grid.arrange(arrangeGrob(grobs = plots, top = "Statistics for cross-validated imputation techniques at increasing amounts of missing values"))
+p_oob
