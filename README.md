@@ -1,6 +1,6 @@
 # Missing data imputation techniques
 
-A brief testing of various missing data imputation techniques with R using the UCI ["Heart Disease"](https://archive.ics.uci.edu/ml/datasets/Heart+Disease) dataset.
+A brief testing of missing data imputation techniques with R using the UCI ["Heart Disease"](https://archive.ics.uci.edu/ml/datasets/Heart+Disease) dataset.
 
 
 
