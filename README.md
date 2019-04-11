@@ -5,4 +5,4 @@ A brief testing of missing data imputation techniques with R using the UCI ["Hea
 
 
 
-![CV error](https://github.com/mfiorani/miss-data/raw/master/images/final_plot.png "CV OOB error")
+![CV error](https://github.com/mfiorani/miss-data/raw/master/img/final_plot.png "CV OOB error")
