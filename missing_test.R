@@ -22,7 +22,8 @@ generate_data <- function(model_name, df, perc, rr, target_var, positive){
   pattern[index] <- 0
   amp <- ampute(df, prop = perc, mech = "MAR", patterns = pattern)
   miss <- ifelse(is.na(amp$amp[, eval(target_var)]), 1, 0)
-
+  label <- df[miss == 1, index]
+  
   # MULTIPLE IMPUTATIONS WITH MI PACKAGE
   if(model_name == "mi"){
     df_covariates_mi <- df
@@ -37,16 +38,20 @@ generate_data <- function(model_name, df, perc, rr, target_var, positive){
     cat(model_name, " imputations completed", fill = T)
 
     mi <- dfs$`chain:1`
+    mi$exang <- round(((as.numeric(mi$exang) - 1) + (as.numeric(dfs$`chain:2`$exang) -1) + 
+                                (as.numeric(dfs$`chain:3`$exang) -1) + (as.numeric(dfs$`chain:4`$exang) -1)) / 4)
     mi <- mi[mi[, ncol(mi)] == T, index]
+    mi <- as.factor(mi)
+    levels(mi) <- levels(label)
   }
-   
+
   # MULTIPLE IMPUTATIONS WITH MICE PACKAGE
   if(model_name == "mice"){
     df_covariates_mi <- df
     df_covariates_mi[, eval(target_var)][miss == 1] <- NA
 
     cat(model_name, " imputations", fill = T)
-    imp <- mice(df_covariates_mi, method = "logreg", m = 1, maxit = 1)
+    imp <- mice(df_covariates_mi, method = "logreg", m = 4, maxit = 5)
     imputations <- mice::complete(imp)
     cat(model_name, " imputations completed", fill = T)
     
@@ -67,8 +72,7 @@ generate_data <- function(model_name, df, perc, rr, target_var, positive){
     mi <- imputations[miss == 1, index]
   }
   
-  label <- df[miss == 1, index]
-  try(cm_mi <- confusionMatrix(as.factor(mi), as.factor(label), positive = positive))
+  cm_mi <- confusionMatrix(as.factor(mi), as.factor(label), positive = positive)
   
   cat(model_name, "saving data", fill = T)
   name <- paste0("CM_r_", rr, "_", model_name, "_", perc)
